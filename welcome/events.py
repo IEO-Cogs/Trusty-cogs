@@ -162,18 +162,22 @@ class Events:
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
-        guild = member.guild
-        if await self.config.guild(guild).PENDING() and member.pending:
-            log.debug("Ignoring member join %r to wait for pending", member)
-            return
-        await self.check_member_join(member)
+        # Don't send welcome on join anymore - wait for Verified role
+        log.debug("Member %r joined, waiting for Verified role", member)
+        return
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         guild = after.guild
-        if await self.config.guild(guild).PENDING():
-            if before.pending != after.pending:
-                await self.check_member_join(after)
+        
+        # Check if the user gained the "Verified" role
+        before_roles = {role.name for role in before.roles}
+        after_roles = {role.name for role in after.roles}
+        
+        if "Verified" not in before_roles and "Verified" in after_roles:
+            # User just got the Verified role, send welcome message
+            log.debug("Member %r obtained Verified role, sending welcome", after)
+            await self.check_member_join(after)
 
     async def check_member_join(self, member: discord.Member):
         guild = member.guild
